@@ -1,6 +1,6 @@
 <script>
 	import { DIFFICULTIES, DIFFICULTY_CUSTOM, GAME_OVER_CELEBRATIONS } from '@sudoku/constants';
-	import { resumeGame } from '@sudoku/game';
+	import { gameStore } from '@sudoku/stores/gameStore';
 	import { modal } from '@sudoku/stores/modal';
 	import { timer } from '@sudoku/stores/timer';
 	import { difficulty } from '@sudoku/stores/difficulty';
@@ -13,7 +13,7 @@
 	}
 
 	function handleNewGame() {
-		modal.show('welcome', { onHide: resumeGame });
+		modal.show('welcome', { onHide: gameStore.resume });
 	}
 </script>
 

@@ -46,6 +46,6 @@
 
 	input[type='checkbox']:focus + .track,
 	input[type='checkbox']:active + .track {
-		@apply outline-none shadow-outline;
+		@apply outline-none ring-2 ring-primary ring-offset-2;
 	}
 </style>

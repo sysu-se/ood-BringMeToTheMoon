@@ -9,17 +9,22 @@
 	export let cellY;
 	export let candidates;
 
+	// 状态 props
 	export let disabled;
-	export let conflictingNumber;
-	export let userNumber;
-	export let selected;
-	export let sameArea;
-	export let sameNumber;
+	export let conflictingNumber;  // 是否冲突
+	export let isFixed;            // 是否是固定数字（题目原有）
+	export let isUserInput;        // 是否是用户输入的数字
+	export let selected;           // 是否选中
+	export let sameArea;           // 是否在同一区域
+	export let sameNumber;         // 是否是相同的数字
 
 	const borderRight = (cellX !== SUDOKU_SIZE && cellX % 3 !== 0);
 	const borderRightBold = (cellX !== SUDOKU_SIZE && cellX % 3 === 0);
 	const borderBottom = (cellY !== SUDOKU_SIZE && cellY % 3 !== 0);
 	const borderBottomBold = (cellY !== SUDOKU_SIZE && cellY % 3 === 0);
+
+	// 样式优先级：冲突 > 用户输入 > 选中 > 其他
+	$: showUserNumber = isUserInput && !conflictingNumber;
 </script>
 
 <div class="cell row-start-{cellY} col-start-{cellX}"
@@ -30,13 +35,13 @@
 
 	{#if !disabled}
 		<div class="cell-inner"
-		     class:user-number={userNumber}
+		     class:user-number={showUserNumber}
 		     class:selected={selected}
 		     class:same-area={sameArea}
 		     class:same-number={sameNumber}
 		     class:conflicting-number={conflictingNumber}>
 
-			<button class="cell-btn" on:click={cursor.set(cellX - 1, cellY - 1)}>
+			<button class="cell-btn" on:click={() => cursor.set(cellX - 1, cellY - 1)}>
 				{#if candidates}
 					<Candidates {candidates} />
 				{:else}
