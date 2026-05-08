@@ -21,6 +21,9 @@ export class Sudoku {
   /** @type {boolean[][]} 9x9 固定掩码，true = 固定不可改 */
   _fixed;
 
+  /** @type {number[][] | null} 求解器缓存，null 表示未缓存 */
+  _solutionCache = null;
+
   /**
    * @param {number[][] | {grid: number[][], fixed: boolean[][]}} input
    * 
@@ -198,6 +201,8 @@ export class Sudoku {
     }
 
     this._grid[move.row][move.col] = move.value;
+    // 清空求解器缓存
+    this._solutionCache = null;
     return true;
   }
 
@@ -348,6 +353,169 @@ export class Sudoku {
     }
     // 检查无冲突
     return this.getConflicts().length === 0;
+  }
+
+  // ========== 提示功能（Hint）==========
+
+  /**
+   * 获取指定位置所有可能的候选值（规则法）
+   * @param {number} row - 行索引 [0-8]
+   * @param {number} col - 列索引 [0-8]
+   * @returns {Set<number>} 候选值集合（1-9），如果位置已有值则返回空集合
+   * @throws {Error} 坐标超出范围
+   */
+  getCandidates(row, col) {
+    this._validateCoord(row, col);
+    
+    // 如果指定位置已有值（非0），返回空集合
+    if (this._grid[row][col] !== 0) {
+      return new Set();
+    }
+    
+    const candidates = new Set();
+    for (let value = 1; value <= 9; value++) {
+      if (!this.hasConflict(row, col, value)) {
+        candidates.add(value);
+      }
+    }
+    return candidates;
+  }
+
+  /**
+   * 扫描整个棋盘，找出所有候选数集合仅 1 个值的格子（全棋盘提示）
+   * @returns {{row: number, col: number, value: number}[]} 所有符合条件的格子列表
+   */
+  findNakedSingles() {
+    const results = [];
+    
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        // 跳过已有值的格子
+        if (this._grid[row][col] !== 0) continue;
+        
+        const candidates = this.getCandidates(row, col);
+        if (candidates.size === 1) {
+          const value = candidates.values().next().value;
+          results.push({ row, col, value });
+        }
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * 获取指定位置的正确答案（通过求解器）
+   * @param {number} row - 行索引 [0-8]
+   * @param {number} col - 列索引 [0-8]
+   * @returns {number} 正确答案（1-9），如果无解或位置已有值则返回 0
+   * @throws {Error} 坐标超出范围
+   */
+  getAnswer(row, col) {
+    this._validateCoord(row, col);
+    
+    // 如果指定位置已有值，返回该值（如果是0则无解）
+    if (this._grid[row][col] !== 0) {
+      return this._grid[row][col];
+    }
+    
+    // 获取求解结果
+    const solution = this._getSolution();
+    if (!solution) {
+      return 0; // 无解
+    }
+    
+    return solution[row][col];
+  }
+
+  /**
+   * 获取完整解答（通过求解器）
+   * @returns {number[][] | null} 完整解答数组，无解返回 null
+   */
+  getSolution() {
+    return this._getSolution();
+  }
+
+  /**
+   * @private
+   * 内部方法：获取或计算求解结果（带缓存）
+   * @returns {number[][] | null}
+   */
+  _getSolution() {
+    // 如果已有缓存，直接返回
+    if (this._solutionCache !== null) {
+      return this._solutionCache;
+    }
+    
+    // 调用求解器
+    const solution = this._solveSudoku();
+    this._solutionCache = solution;
+    return solution;
+  }
+
+  /**
+   * @private
+   * 调用外部求解器
+   * @returns {number[][] | null}
+   */
+  _solveSudoku() {
+    // 使用内置简单求解器作为默认方案
+    // 外部求解器的集成可在后续优化
+    return this._simpleSolver();
+  }
+
+  /**
+   * @private
+   * 简单的回溯求解器（内置备选）
+   * @returns {number[][] | null}
+   */
+  _simpleSolver() {
+    const grid = this._grid.map(row => [...row]);
+    
+    const isValid = (grid, row, col, num) => {
+      // 检查行
+      for (let c = 0; c < 9; c++) {
+        if (grid[row][c] === num) return false;
+      }
+      // 检查列
+      for (let r = 0; r < 9; r++) {
+        if (grid[r][col] === num) return false;
+      }
+      // 检查宫
+      const boxRow = Math.floor(row / 3) * 3;
+      const boxCol = Math.floor(col / 3) * 3;
+      for (let r = boxRow; r < boxRow + 3; r++) {
+        for (let c = boxCol; c < boxCol + 3; c++) {
+          if (grid[r][c] === num) return false;
+        }
+      }
+      return true;
+    };
+    
+    const solve = (grid) => {
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          if (grid[row][col] === 0) {
+            for (let num = 1; num <= 9; num++) {
+              if (isValid(grid, row, col, num)) {
+                grid[row][col] = num;
+                if (solve(grid)) {
+                  return true;
+                }
+                grid[row][col] = 0;
+              }
+            }
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+    
+    if (solve(grid)) {
+      return grid;
+    }
+    return null;
   }
 }
 
